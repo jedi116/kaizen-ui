@@ -6,3 +6,4 @@ export { default as CategoryList } from './CategoryList';
 export { default as DateRangeFilter } from './DateRangeFilter';
 export { default as CategoryAggregation } from './CategoryAggregation';
 export { default as FilterBar } from './FilterBar';
+export { default as MonthSelector } from './MonthSelector';

@@ -32,6 +32,7 @@ interface FinanceUIState {
   };
   setDateRange: (startDate: string | null, endDate: string | null) => void;
   clearDateRange: () => void;
+  clearAllFilters: () => void;
 
   // Build journal filters from UI state
   getJournalFilters: () => JournalFilters;
@@ -93,6 +94,11 @@ export const useFinanceStore = create<FinanceUIState>((set, get) => ({
     }),
   clearDateRange: () =>
     set({
+      dateRange: { startDate: null, endDate: null },
+    }),
+  clearAllFilters: () =>
+    set({
+      filterType: 'all',
       dateRange: { startDate: null, endDate: null },
     }),
 

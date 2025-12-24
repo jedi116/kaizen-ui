@@ -1,5 +1,5 @@
-import { Pencil, Trash2, MoreVertical } from 'lucide-react';
-import { useState } from 'react';
+import { Pencil, Trash2, MoreVertical, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Badge, EmptyState } from '../ui';
 import type { FinanceJournal } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
@@ -8,12 +8,54 @@ interface TransactionListProps {
   transactions: FinanceJournal[];
   onEdit: (transaction: FinanceJournal) => void;
   onDelete: (id: number) => void;
+  // Infinite scroll props
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  fetchNextPage?: () => void;
+  totalCount?: number;
 }
 
-const TransactionList = ({ transactions, onEdit, onDelete }: TransactionListProps) => {
+const TransactionList = ({
+  transactions,
+  onEdit,
+  onDelete,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  fetchNextPage,
+  totalCount,
+}: TransactionListProps) => {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  if (transactions.length === 0) {
+  // Set up IntersectionObserver for infinite scroll
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [target] = entries;
+      if (target.isIntersecting && hasNextPage && !isFetchingNextPage && fetchNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0,
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [handleObserver]);
+
+  if (transactions.length === 0 && !isFetchingNextPage) {
     return (
       <Card>
         <EmptyState
@@ -39,6 +81,13 @@ const TransactionList = ({ transactions, onEdit, onDelete }: TransactionListProp
 
   return (
     <div className="space-y-6">
+      {/* Transaction count indicator */}
+      {totalCount !== undefined && (
+        <div className="text-sm text-white/50">
+          Showing {transactions.length} of {totalCount} transactions
+        </div>
+      )}
+
       {Object.entries(groupedTransactions).map(([date, items]) => (
         <div key={date}>
           <h4 className="text-sm font-medium text-white/50 mb-3">
@@ -135,6 +184,24 @@ const TransactionList = ({ transactions, onEdit, onDelete }: TransactionListProp
           </Card>
         </div>
       ))}
+
+      {/* Load more trigger element */}
+      <div ref={loadMoreRef} className="h-4" />
+
+      {/* Loading indicator */}
+      {isFetchingNextPage && (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-6 h-6 animate-spin text-accent-cyan" />
+          <span className="ml-2 text-sm text-white/50">Loading more transactions...</span>
+        </div>
+      )}
+
+      {/* End of list indicator */}
+      {!hasNextPage && transactions.length > 0 && (
+        <div className="text-center py-4 text-sm text-white/30">
+          You&apos;ve reached the end of the list
+        </div>
+      )}
     </div>
   );
 };

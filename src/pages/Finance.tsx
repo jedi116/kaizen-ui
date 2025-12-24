@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, FolderPlus } from 'lucide-react';
 import { Button } from '../components/ui';
 import {
@@ -8,9 +8,8 @@ import {
   TransactionList,
   CategoryList,
   FilterBar,
-  CategoryAggregation,
 } from '../components/finance';
-import { useCategories, useJournalsList, useSummary } from '../hooks';
+import { useCategories, useInfiniteJournals, useJournalsList, useSummary } from '../hooks';
 import { useJournalMutations, useCategoryMutations } from '../hooks';
 import { useFinanceStore } from '../stores';
 import { tabsConfig } from '../config/finance.config';
@@ -40,19 +39,47 @@ const Finance = () => {
     dateRange,
     setDateRange,
     clearDateRange,
+    clearAllFilters,
     getJournalFilters,
   } = useFinanceStore();
 
-  // Local state for aggregation view
-  const [showAggregation, setShowAggregation] = useState(false);
+  // Local state for summary month selection
+  const [summaryMonth, setSummaryMonth] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  );
+
+  // Calculate start and end dates for the selected summary month
+  const summaryDateRange = useMemo(() => {
+    const startDate = new Date(summaryMonth.getFullYear(), summaryMonth.getMonth(), 1);
+    const endDate = new Date(summaryMonth.getFullYear(), summaryMonth.getMonth() + 1, 0);
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    };
+  }, [summaryMonth]);
 
   // Data fetching with TanStack Query
   const { data: categories = [] } = useCategories();
+
+  // Transactions tab data - with filters and infinite scroll
   const filters = getJournalFilters();
-  const { journals } = useJournalsList(filters);
+  const { journals, totalCount, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useInfiniteJournals(filters);
+
+  // Summary tab data - fetch ALL journals for the selected month
+  const { journals: summaryJournals } = useJournalsList(
+    {
+      start_date: summaryDateRange.startDate,
+      end_date: summaryDateRange.endDate,
+      page_size: 1000, // High page size to get all transactions for the month
+    },
+    activeTab === 'summary' // Only fetch when summary tab is active
+  );
+
+  // Summary API data for the selected month
   const { data: summary } = useSummary({
-    startDate: dateRange.startDate || undefined,
-    endDate: dateRange.endDate || undefined,
+    startDate: summaryDateRange.startDate,
+    endDate: summaryDateRange.endDate,
   });
 
   // Mutations
@@ -159,27 +186,21 @@ const Finance = () => {
           onStartDateChange={handleStartDateChange}
           onEndDateChange={handleEndDateChange}
           onClearDateRange={clearDateRange}
-          showAggregation={showAggregation}
-          onToggleAggregation={() => setShowAggregation(!showAggregation)}
+          onClearAllFilters={clearAllFilters}
         />
       )}
 
       {/* Content */}
       {activeTab === 'transactions' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className={showAggregation ? 'lg:col-span-2' : 'lg:col-span-3'}>
-            <TransactionList
-              transactions={journals}
-              onEdit={handleEditTransaction}
-              onDelete={handleDeleteTransaction}
-            />
-          </div>
-          {showAggregation && (
-            <div className="lg:col-span-1">
-              <CategoryAggregation journals={journals} categories={categories} type={filterType} />
-            </div>
-          )}
-        </div>
+        <TransactionList
+          transactions={journals}
+          onEdit={handleEditTransaction}
+          onDelete={handleDeleteTransaction}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          totalCount={totalCount}
+        />
       )}
 
       {activeTab === 'categories' && (
@@ -192,7 +213,13 @@ const Finance = () => {
       )}
 
       {activeTab === 'summary' && (
-        <FinanceSummary summary={summary ?? null} categories={categories} journals={journals} />
+        <FinanceSummary
+          summary={summary ?? null}
+          categories={categories}
+          journals={summaryJournals}
+          selectedMonth={summaryMonth}
+          onMonthChange={setSummaryMonth}
+        />
       )}
 
       {/* Modals */}

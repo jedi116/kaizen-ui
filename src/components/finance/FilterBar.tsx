@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { filterOptions } from '../../config/finance.config';
 import type { FilterType } from '../../config/finance.config';
 import DateRangeFilter from './DateRangeFilter';
@@ -10,8 +11,7 @@ export interface FilterBarProps {
   onStartDateChange: (date: string | null) => void;
   onEndDateChange: (date: string | null) => void;
   onClearDateRange: () => void;
-  showAggregation: boolean;
-  onToggleAggregation: () => void;
+  onClearAllFilters: () => void;
 }
 
 const FilterBar = ({
@@ -22,9 +22,11 @@ const FilterBar = ({
   onStartDateChange,
   onEndDateChange,
   onClearDateRange,
-  showAggregation,
-  onToggleAggregation,
+  onClearAllFilters,
 }: FilterBarProps) => {
+  // Check if any filters are active
+  const hasActiveFilters = filterType !== 'all' || startDate !== null || endDate !== null;
+
   return (
     <div
       className="flex flex-wrap items-center gap-4 p-3 glass-card rounded-xl"
@@ -54,17 +56,17 @@ const FilterBar = ({
         onClear={onClearDateRange}
       />
 
-      {/* Aggregation Toggle */}
-      <button
-        onClick={onToggleAggregation}
-        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-          showAggregation
-            ? 'bg-accent-violet/30 text-accent-violet'
-            : 'bg-glass-light text-white/60 hover:text-white'
-        }`}
-      >
-        {showAggregation ? 'Hide' : 'Show'} Aggregation
-      </button>
+      {/* Clear All Filters Button */}
+      {hasActiveFilters && (
+        <button
+          onClick={onClearAllFilters}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 transition-all"
+          data-testid="clear-all-filters"
+        >
+          <X className="w-3 h-3" />
+          Clear All Filters
+        </button>
+      )}
     </div>
   );
 };

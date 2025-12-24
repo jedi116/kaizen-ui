@@ -11,8 +11,7 @@ describe('FilterBar', () => {
     onStartDateChange: vi.fn(),
     onEndDateChange: vi.fn(),
     onClearDateRange: vi.fn(),
-    showAggregation: false,
-    onToggleAggregation: vi.fn(),
+    onClearAllFilters: vi.fn(),
   };
 
   beforeEach(() => {
@@ -42,24 +41,49 @@ describe('FilterBar', () => {
     expect(screen.getByTestId('date-range-filter')).toBeInTheDocument();
   });
 
-  it('renders aggregation toggle button', () => {
-    render(<FilterBar {...defaultProps} />);
-    expect(screen.getByText('Show Aggregation')).toBeInTheDocument();
-  });
-
-  it('shows Hide Aggregation when showAggregation is true', () => {
-    render(<FilterBar {...defaultProps} showAggregation={true} />);
-    expect(screen.getByText('Hide Aggregation')).toBeInTheDocument();
-  });
-
-  it('calls onToggleAggregation when button is clicked', () => {
-    render(<FilterBar {...defaultProps} />);
-    fireEvent.click(screen.getByText('Show Aggregation'));
-    expect(defaultProps.onToggleAggregation).toHaveBeenCalled();
-  });
-
   it('passes date props to DateRangeFilter', () => {
     render(<FilterBar {...defaultProps} startDate="2024-01-01" endDate="2024-01-31" />);
     expect(screen.getByText('Clear')).toBeInTheDocument();
+  });
+
+  describe('Clear All Filters Button', () => {
+    it('does not show Clear All Filters button when no filters are active', () => {
+      render(<FilterBar {...defaultProps} />);
+      expect(screen.queryByTestId('clear-all-filters')).not.toBeInTheDocument();
+    });
+
+    it('shows Clear All Filters button when filter type is not "all"', () => {
+      render(<FilterBar {...defaultProps} filterType="income" />);
+      expect(screen.getByTestId('clear-all-filters')).toBeInTheDocument();
+      expect(screen.getByText('Clear All Filters')).toBeInTheDocument();
+    });
+
+    it('shows Clear All Filters button when start date is set', () => {
+      render(<FilterBar {...defaultProps} startDate="2024-01-01" />);
+      expect(screen.getByTestId('clear-all-filters')).toBeInTheDocument();
+    });
+
+    it('shows Clear All Filters button when end date is set', () => {
+      render(<FilterBar {...defaultProps} endDate="2024-01-31" />);
+      expect(screen.getByTestId('clear-all-filters')).toBeInTheDocument();
+    });
+
+    it('calls onClearAllFilters when Clear All Filters button is clicked', () => {
+      render(<FilterBar {...defaultProps} filterType="income" />);
+      fireEvent.click(screen.getByTestId('clear-all-filters'));
+      expect(defaultProps.onClearAllFilters).toHaveBeenCalled();
+    });
+
+    it('shows Clear All Filters button when both filter type and dates are set', () => {
+      render(
+        <FilterBar
+          {...defaultProps}
+          filterType="expense"
+          startDate="2024-01-01"
+          endDate="2024-01-31"
+        />
+      );
+      expect(screen.getByTestId('clear-all-filters')).toBeInTheDocument();
+    });
   });
 });

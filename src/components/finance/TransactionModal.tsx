@@ -106,7 +106,6 @@ const TransactionModal = ({
   // Filter categories - show active ones, or all if is_active is not set
   const filteredCategories = categories.filter((c) => c.is_active !== false);
 
-
   return (
     <Modal
       isOpen={isOpen}
